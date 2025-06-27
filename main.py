@@ -1,163 +1,95 @@
-from patchright.sync_api import sync_playwright
-import os
-import json
-from groq import Groq
+from patchright._impl._errors import TimeoutError
+import re
 from dotenv import load_dotenv
+import time
 
-load_dotenv()  # Load .env
+from browser_utils import launch_edge_persistent_context
+from cookie_utils import sanitize_cookies, load_cookies
+from xpath_selectors import unread_badge_xpath, message_xpath, product_xpath, text_area_xpath, send_button_xpath
+from db_utils import save_db
+from chat_handler import handle_chat
+from groq_utils import interpret_intent
 
-def sanitize_cookies(raw_cookies):
-    for cookie in raw_cookies:
-        cookie.pop("id", None)
-        cookie.pop("storeId", None)
-        cookie.pop("hostOnly", None)
-        cookie.pop("session", None)
-        if cookie.get("sameSite") not in ["Strict", "Lax", "None"]:
-            cookie["sameSite"] = "Lax"
-    return raw_cookies
+load_dotenv()
+
+chat_logs = {}
 
 def run():
-    edge_path = "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
-    user_data_dir = os.path.expanduser("~/Library/Application Support/Microsoft Edge")
+    browser, playwright = launch_edge_persistent_context()
+    page = browser.pages[0]
+    cookies = sanitize_cookies(load_cookies())
+    browser.add_cookies(cookies)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch_persistent_context(
-            user_data_dir=user_data_dir,
-            executable_path=edge_path,
-            headless=False,
-            no_viewport=True,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--disable-infobars",
-            ],
-        )
+    try:
+        while True:
+            page.goto("https://www.carousell.com.hk/inbox", wait_until="domcontentloaded")
+            if "inbox" not in page.url:
+                print("Warning: Inbox page may not have loaded correctly.")
 
-        page = browser.pages[0]
+            unread_badge_selector = unread_badge_xpath()
 
-        with open("cookies.json", "r") as f:
-            raw_cookies = json.load(f)
+            try:
+                page.wait_for_selector(unread_badge_selector, timeout=5000)
+            except TimeoutError:
+                print("No new unread messages, retrying...")
+                time.sleep(10)  # Wait before checking again
+                continue
 
-        cookies = sanitize_cookies(raw_cookies)
-        browser.add_cookies(cookies)
+            badge = page.locator(unread_badge_selector)
 
-        page.goto("https://www.carousell.com.hk/inbox", wait_until="domcontentloaded")
-        if "inbox" not in page.url:
-            print("Warning: Inbox page may not have loaded correctly.")
-        # page.evaluate("document.body.style.zoom = '0.9'")
-        
-        required_classes = [
-        'D_lm', 'D_ln', 'D_lr', 'D_lu', 'D_lx', 'D_l_', 'D_arx', 'D_lJ'
-        ]
-        class_condition = " and ".join([f"contains(@class, '{cls}')" for cls in required_classes])
-        badge_xpath = f'//span[{class_condition} and string(number(normalize-space(text()))) != "NaN"]'
-        
-        try:
-            page.wait_for_selector(badge_xpath, timeout=10000)
-        except TimeoutError:
-            print("Timeout: No badge found within the wait period.")
-            return
-        
-        badge = page.locator(badge_xpath)
+            if badge:
+                print("Unread notification found")
+                button = badge.evaluate_handle("node => node.closest('[role=\"button\"]')")
+                if button:
+                    try:
+                        button.click()
+                    except Exception as e:
+                        print(f"Failed to click button: {e}")
+                        continue
 
-        if badge:
-            print("Unread notification found")
-            button = badge.evaluate_handle("node => node.closest('[role=\"button\"]')")
-            if button:
-                try:
-                    button.click()
-                except Exception as e:
-                    print(f"Failed to click button: {e}")
-                    return
+                    chat_url = page.url
+                    match = re.search(r'/inbox/(\d+)', chat_url)
+                    if not match:
+                        print("Could not extract chat ID.")
+                        continue
 
-                # Wait for real messages
-                required_classes = [
-                    'D_lm', 'D_ln', 'D_ls', 'D_lq', 'D_lu', 'D_lx', 'D_lz', 'D_ctB', 'D_cts', 'D_lH'
-                ]
-                class_condition = " and ".join([f"contains(@class, '{cls}')" for cls in required_classes])
-                xpath = f'//div[starts-with(@id, "chat-message-")]//p[{class_condition}]'
+                    chat_id = match.group(1)
 
-                try:
-                    page.wait_for_selector(xpath, timeout=10000)
-                except TimeoutError:
-                    print("Timeout: No messages found within the wait period.")
-                    return
-                
-                count = page.locator(xpath).count()
-                print(f"Found {count} messages")
+                    try:
+                        page.wait_for_selector(product_xpath(), timeout=10000)
+                        product = page.locator(product_xpath()).inner_text().strip()
+                        page.wait_for_selector(message_xpath(), timeout=10000)
+                        messages = [msg.inner_text().strip() for msg in page.locator(message_xpath()).all()]
+                    except TimeoutError:
+                        print("Timeout retrieving product or messages.")
+                        continue
 
-                message_blocks = page.locator(xpath).all()
+                    save_db(chat_id, product, messages)
+                    response = handle_chat(chat_id)
 
-                if message_blocks:
-                    for msg in message_blocks:
-                        print(msg.inner_text().strip())
-                else:
-                    print("No message blocks found.")
-
+                    if response:
+                        try:
+                            page.wait_for_selector(text_area_xpath(), timeout=10000)
+                            page.locator(text_area_xpath()).fill(response)
+                            page.wait_for_selector(send_button_xpath(), timeout=10000)
+                            page.locator(send_button_xpath()).click()
+                            print("Response sent.")
+                        except TimeoutError:
+                            print("Timeout: could not find input/send button.")
+                    else:
+                        print("No response generated.")
             else:
-                print("Parent button not found")
-        else:
-            print("No unread notifications")
+                print("No unread notifications.")
+            
+            # Go back to inbox and wait a bit before next poll
+            time.sleep(5)
 
+    except KeyboardInterrupt:
+        print("Stopping polling loop.")
 
-
-
-
-        # page.screenshot(path="inbox.png")
-
-        # coords = detect_notification_coords("inbox.png")
-        # if coords is None:
-        #     print("No unread notifications found.")
-        # else:
-        #     x, y = int(coords["x"]), int(coords["y"])
-        #     print(f"Badge found at ({x}, {y})")
-        #     page.evaluate(f"""
-        #         const marker = document.createElement('div');
-        #         marker.style.position = 'absolute';
-        #         marker.style.left = '{x}px';
-        #         marker.style.top = '{y}px';
-        #         marker.style.width = '12px';
-        #         marker.style.height = '12px';
-        #         marker.style.backgroundColor = 'red';
-        #         marker.style.borderRadius = '50%';
-        #         marker.style.zIndex = 9999;
-        #         marker.style.boxShadow = '0 0 5px black';
-        #         marker.style.pointerEvents = 'none';
-        #         document.body.appendChild(marker);
-        #     """)
-
-        #     page.mouse.click(x, y)
-        #     print(f"Badge clicked at ({x}, {y})")
-
-        # if coords is not None:
-        #     x, y = int(coords["x"]), int(coords["y"])
-        #     page.mouse.click(x, y)
-        #     print(f"Badge clicked at ({x}, {y})")
-        # else:
-        #     print("No unread notifications found.")
-        #     browser.close()
-
-        # x, y = int(coords["x"]), int(coords["y"])
-
-        # page.evaluate(f"""
-        #     const marker = document.createElement('div');
-        #     marker.style.position = 'absolute';
-        #     marker.style.left = '{x}px';
-        #     marker.style.top = '{y}px';
-        #     marker.style.width = '12px';
-        #     marker.style.height = '12px';
-        #     marker.style.backgroundColor = 'red';
-        #     marker.style.borderRadius = '50%';
-        #     marker.style.zIndex = 9999;
-        #     marker.style.boxShadow = '0 0 5px black';
-        #     marker.style.pointerEvents = 'none';
-        #     document.body.appendChild(marker);
-        # """)
-
-        # # page.mouse.click(x, y)
-        # print(f"Badge clicked at ({x}, {y})")
-
-        input("Press Enter to close browser...")
+    finally:
         browser.close()
+        playwright.stop()
 
 if __name__ == "__main__":
     run()

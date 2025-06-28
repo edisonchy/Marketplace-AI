@@ -1,4 +1,4 @@
-from groq_utils import interpret_intent, generate_buy_response, generate_ask_response
+from groq_utils import interpret_intent, generate_buy_response, generate_ask_response, generate_other_response
 
 def handle_chat(chat_id):
     intent = interpret_intent(chat_id)
@@ -21,6 +21,11 @@ def handle_chat(chat_id):
     elif intent == "ask":
         print("Answering question.")
         response = generate_ask_response(chat_id)
+
+    elif intent == "other":
+        print("Sending generic response.")
+        response = generate_other_response(chat_id)
+        
 
     else:
         response = "I'm sorry, I don't understand."

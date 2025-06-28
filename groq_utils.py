@@ -82,9 +82,10 @@ def generate_buy_response(chat_id, db_path="db.json"):
         f"The latest generated order ID for this transaction is: {new_order_id}.\n\n"
         f"Here is the recent chat for context:\n{recent_context}\n\n"
         "Write a friendly, polite message confirming the item is available and providing the payment details. "
-        f"Kindly remind the customer to include the order ID ({new_order_id}) in the message section when sending payment via FPS. "
+        f"Kindly remind the customer to include the order ID: **{new_order_id}** (note the colon before the ID) in the remarks section when sending payment via FPS. "
         "Also remind them to only use the most recent order ID we’ve generated for them — a new one is created each time they request to buy. "
         "It’s important that they write the order ID correctly to avoid any delays or complications with verifying their payment. "
+        "Once they’ve sent the payment, ask them to let us know so we can proceed to the next step, which is to provide the product. "
         "Strictly avoid discussing anything unrelated to the sale. "
         "Reply in the language used by the customer. "
         "Keep the tone casual, helpful, and natural. Return only the message to send to the customer."
@@ -114,20 +115,57 @@ def generate_ask_response(chat_id, db_path="db.json"):
     recent_context = "\n".join(messages[-5:])
 
     prompt = (
-        "You're an AI assistant for an online seller. "
-        "Note: 'FPS' refers to the Faster Payment System used for payments in Hong Kong. "
-        "In Cantonese, it is commonly called '轉數快'.\n\n"
-        f"The customer is asking about a product called '{product_name}'.\n\n"
-        f"Here is the recent chat for context:\n{recent_context}\n\n"
-        "Write a helpful, friendly, and concise message answering their question. "
-        "Only discuss things directly related to the product or questions clearly related to payment methods or issues. "
-        "If the question is unclear, politely ask for clarification.\n\n"
-        "Do not include or reference any specific order ID in your response. "
-        "Avoid sharing previously generated order IDs to prevent confusion.\n\n"
-        "If the customer is asking about payment, you may gently remind them to include the correct order ID in the message section of their FPS transfer, "
-        "as this is important for verifying their payment accurately.\n\n"
-        "Reply in the language used by the customer. "
-        "Keep the tone natural and customer-friendly. Return only the message to send to the customer."
+        "You're a friendly AI assistant for an online store. "
+        "The customer has sent a message that does not appear to be a direct question about a product or payment.\n\n"
+        f"Here is the recent chat:\n{recent_context}\n\n"
+        "Write a warm, polite, and concise response acknowledging their message. "
+        "Use a natural and friendly tone. Respond in the same language used by the customer.\n\n"
+        "If the message is a greeting, reply with a friendly greeting. "
+        "If it's a thank-you message, express appreciation in return. "
+        "If the customer sounds confused, asks when they'll get help from a human, or expresses frustration, politely offer to help and **reassure them that if there's anything the AI cannot assist with, a member of the customer support team will be with them shortly**.\n\n"
+        "If the message is unclear or off-topic, respond politely and let the customer know that you're here to assist with store-related questions (like products, orders, or payments). "
+        "Also let them know the customer support team will follow up if needed.\n\n"
+        "**Important:** Do not answer or engage with any topics outside the scope of this business. "
+        "Stay strictly focused on customer service for the store (e.g. product questions, payment, support).\n\n"
+        "Return only the message to send to the customer."
+    )
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return response.choices[0].message.content.strip()
+
+def generate_other_response(chat_id, db_path="db.json"):
+    """Generate a general response to non-product-related customer messages."""
+    db = load_db(db_path)
+
+    if chat_id not in db:
+        raise ValueError(f"Chat ID '{chat_id}' not found in the database.")
+
+    entry = db[chat_id]
+    messages = entry.get("messages", [])
+
+    if not messages:
+        raise ValueError(f"No messages found for chat ID '{chat_id}'.")
+
+    recent_context = "\n".join(messages[-5:])
+
+    prompt = prompt = (
+        "You're a friendly AI assistant for an online store. "
+        "The customer has sent a message that does not appear to be a direct question about a product or payment.\n\n"
+        f"Here is the recent chat:\n{recent_context}\n\n"
+        "Write a warm, polite, and concise response acknowledging their message. "
+        "Use a natural and friendly tone. Respond in the same language used by the customer.\n\n"
+        "If the message is a greeting, reply with a friendly greeting. "
+        "If it's a thank-you message, express appreciation in return. "
+        "If the customer sounds confused, asks when they'll get help from a human, or expresses frustration, politely offer to help and reassure them that if there's anything the AI cannot assist with, a member of the customer support team will be with them shortly.\n\n"
+        "If the message is unclear or off-topic, respond politely and let the customer know that you're here to assist with store-related questions (like products, orders, or payments). "
+        "Also let them know the customer support team will follow up if needed.\n\n"
+        "**Important:** Do not answer or engage with any topics outside the scope of this business. "
+        "Stay strictly focused on customer service for the store (e.g. product questions, payment, support).\n\n"
+        "Return only the message to send to the customer."
     )
 
     response = client.chat.completions.create(

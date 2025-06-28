@@ -19,6 +19,7 @@ def save_db(chat_id, product, messages, file_path="db.json"):
         "product": product,
         "order_id": "",
         "status": "",
+        "error": "",
         "messages": messages
     }
 

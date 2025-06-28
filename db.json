@@ -3,10 +3,8 @@
     "product": "testing",
     "order_id": "",
     "status": "",
+    "error": "",
     "messages": [
-      "what is fps",
-      "how to I pay through fps",
-      "I haven't paid yet how do I pay through fps",
       "I haven't paid yet how do I pay through fps",
       "I haven't paid yet how do I pay through fps",
       "how do I pay through fps",
@@ -29,7 +27,11 @@
       "The \"testing\" product is available for purchase at HK$100. To complete the payment, please use FPS with the payment ID 123. When sending the payment, kindly include the order ID C9CHYBFVQF in the message section. Remember to use the most recent order ID we've generated for you, as a new one is created each time you request to buy, and please double-check that you've written it correctly to avoid any delays.",
       "我想買",
       "您想購買「testing」產品。產品價格為HK$100，請使用FPS繳費，繳費ID為123。當您繳費時，請在訊息欄輸入最新的訂單ID：XAEQUSSEYY。請注意，每次您要求購買時，我們都會生成一個新的訂單ID，因此請務必使用最新的ID，並確認您輸入的ID正確，以避免延遲或驗證 payment 時的困擾。",
-      "I ddint recive my product"
+      "I ddint recive my product",
+      "您好！您購買「testing」產品後沒有收到貨物？或者您想再次購買？如果是關於付款問題，請確認您已經正確使用FPS轉數快付款，並在付款訊息欄輸入正確的訂單ID，以便我們快速確認您的付款。請提供更多詳情，以便我們為您解決問題。",
+      "how much is it",
+      "how much is it",
+      "so how much is it"
     ]
   },
   "1993481187": {

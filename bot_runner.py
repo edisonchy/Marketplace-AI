@@ -6,9 +6,8 @@ import time
 from browser_utils import launch_edge_persistent_context
 from cookie_utils import sanitize_cookies, load_cookies
 from xpath_selectors import unread_badge_xpath, message_xpath, product_xpath, text_area_xpath, send_button_xpath
-from db_utils import save_db
+from db_utils import save_db, update_db, load_db
 from chat_handler import handle_chat
-from groq_utils import interpret_intent
 
 load_dotenv()
 
@@ -62,7 +61,12 @@ def run():
                         print("Timeout retrieving product or messages.")
                         continue
 
-                    save_db(chat_id, product, messages)
+                    db = load_db()
+
+                    if chat_id not in db:
+                        save_db(chat_id, product, messages)
+                    else:
+                        update_db(chat_id, {"messages": messages})
                     response = handle_chat(chat_id)
 
                     if response:

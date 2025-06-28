@@ -75,6 +75,7 @@ def generate_unique_order_id(db, length=10):
 
 def generate_buy_response(chat_id, db_path="db.json"):
     db = load_db(db_path)
+
     if chat_id not in db:
         raise ValueError(f"Chat ID '{chat_id}' not found.")
 
@@ -88,14 +89,22 @@ def generate_buy_response(chat_id, db_path="db.json"):
     recent_context = "\n".join(messages[-5:])
     price = 100
     fps_id = "123"
-    new_order_id = generate_unique_order_id(db)
-    update_db(chat_id, {"order_id": new_order_id}, file_path=db_path)
 
-    # Step 1: Detect language of last message
+    current_order_id = entry.get("order_id")
+    if not current_order_id:
+        current_order_id = generate_unique_order_id(db)
+        print(f"Generated new order ID: {current_order_id}")
+        
+        # Update both DB and local entry object
+        entry["order_id"] = current_order_id
+        update_db(chat_id, {"order_id": current_order_id}, file_path=db_path)
+
+        # Step 1: Detect language of last message
     lang_prompt = (
         f"What language is this message written in? Only return the language name.\n\n"
         f"Message:\n{last_message}"
     )
+        
     lang_response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": lang_prompt}]
@@ -108,18 +117,17 @@ def generate_buy_response(chat_id, db_path="db.json"):
         f"Product name: '{product_name}'\n"
         f"Price: HK${price}\n"
         f"FPS payment ID: {fps_id}\n"
-        f"Order ID: {new_order_id}\n\n"
+        f"Order ID: {current_order_id}\n\n"
         f"Recent chat (messages unlabeled):\n{recent_context}\n\n"
 
         "If the customer is asking about purchasing a different product, do not include any product details, payment information, or order ID. "
         "Instead, kindly instruct them to open a new chat from the product page of the item they wish to purchase, and place their order there.\n\n"
 
         "Otherwise, write a short, helpful, and polite response confirming the item is still available and providing FPS payment instructions. "
-        f"Clearly tell the customer to include only this exact order ID: {new_order_id} in the FPS payment remarks. Letters and numbers only."
+        f"Clearly tell the customer to include only this exact order ID: {current_order_id} in the FPS payment remarks. Letters and numbers only."
         "Warn them that including anything else (e.g., emojis, extra words, or the wrong ID) may delay or prevent payment verification. "
         "Let them know that FPS is the only accepted payment method.\n\n"
 
-        "Remind them that a new order ID is generated each time they request to order, so they should always use the latest one. "
         "Ask them to notify us once payment is complete so delivery can proceed.\n\n"
 
         f"Respond in this language: {customer_language}.\n"
@@ -178,7 +186,7 @@ def generate_ask_response(chat_id, db_path="db.json"):
         "- If the customer asks how purchasing or payment works:\n"
         "  → Explain that **FPS (Faster Payment System)** is the only accepted method.\n"
         "  → Let them know that when they’re ready to order, a unique order ID will be generated.\n"
-        "  → They must include this exact order ID — and nothing else — in the **FPS payment remarks**.\n"
+        "  → They must include this exact order ID — and nothing else — in the FPS payment remarks.\n"
         "  → Once payment is made, the system will:\n"
         "     - Wait for the funds to arrive (this usually takes around 5 minutes)\n"
         "  → After confirmation of payment, the customer should message us again to check the payment status.\n"

@@ -10,36 +10,60 @@ load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 def interpret_intent(chat_id, db_path="db.json"):
-    """Interpret the intent of the last messages in a chat conversation."""
-    chat_logs = load_db(db_path)
+    db = load_db(db_path)
+    if chat_id not in db:
+        raise ValueError(f"Chat ID '{chat_id}' not found.")
 
-    if chat_id not in chat_logs:
-        raise ValueError(f"Chat ID '{chat_id}' not found in chat logs.")
-
-    messages = chat_logs[chat_id].get("messages", [])
+    messages = db[chat_id].get("messages", [])
     if not messages:
-        raise ValueError(f"No messages found for chat ID '{chat_id}'.")
+        return "other"
 
-    recent = "\n".join(messages[-5:])  # Last 5 messages for context
+    recent = messages[-5:]
+    full_chat = "\n".join(recent)
+    parcial_chat = "\n".join(recent[:-2])
+    last_message = recent[-1]
 
-    prompt = (
+    # Step 1: First Intent Classification
+    classification_prompt = (
         "You're an AI assistant managing online transactions. "
-        "From this chat, determine the customer's intent based on the recent messages. "
+        "Your task is to determine the customer's intent based on a short chat history. "
+        "Messages are not labeled, so infer speaker from context. "
+        "Focus especially on the final message.\n\n"
         "Possible intents:\n"
-        "- ask: Asking about the product or shipping.\n"
-        "- buy: Expressing interest in buying or reserving the item.\n"
-        "- paid: Indicating payment has been made.\n"
-        # "- redeem: Trying to arrange pickup or delivery.\n"
-        # "- other: Anything else (e.g. small talk, irrelevant).\n"
-        f"\nChat:\n{recent}\n\nReturn only the intent (e.g., buy, ask, etc)."
+        "- ask: Asking about the product\n"
+        "- buy: Expressing interest in buying\n"
+        "- paid: Confirming payment\n"
+        "- other: Small talk, unclear, or irrelevant\n\n"
+        f"Chat:\n{full_chat}\n\n"
+        "Return only the intent."
     )
 
-    response = client.chat.completions.create(
+    intent_response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": classification_prompt}]
+    )
+    intent = intent_response.choices[0].message.content.strip().lower()
+
+    # Step 2: Self-Validation Check
+    validation_prompt = (
+        f"You previously classified the customer's intent as: '{intent}'.\n"
+        f"Final message:\n\"{last_message}\"\n\n"
+        "If the final message is too short or unclear, use the earlier chat for additional context.\n\n"
+        f"Earlier chat context:\n{parcial_chat}\n\n"
+        "Based on this context, does the final message support the classified intent? Answer only 'yes' or 'no'."
     )
 
-    return response.choices[0].message.content.strip().lower()
+    validation_response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": validation_prompt}]
+    )
+    confidence = validation_response.choices[0].message.content.strip().lower()
+
+    if confidence != "yes":
+        print(f"⚠️ Confidence check failed — downgrading intent from '{intent}' to 'other'")
+        return "other"
+
+    return intent
 
 def generate_unique_order_id(db, length=10):
     """Generate a unique alphanumeric order ID not currently in db."""
@@ -50,53 +74,67 @@ def generate_unique_order_id(db, length=10):
             return new_id
 
 def generate_buy_response(chat_id, db_path="db.json"):
-    """Generate a friendly message with payment details based on chat context."""
     db = load_db(db_path)
-
     if chat_id not in db:
-        raise ValueError(f"Chat ID '{chat_id}' not found in the database.")
+        raise ValueError(f"Chat ID '{chat_id}' not found.")
 
     entry = db[chat_id]
     product_name = entry.get("product")
     messages = entry.get("messages", [])
-
     if not messages:
         raise ValueError(f"No messages found for chat ID '{chat_id}'.")
 
+    last_message = messages[-1]
     recent_context = "\n".join(messages[-5:])
     price = 100
     fps_id = "123"
-
-    # Step 1–2: Generate a unique order ID
     new_order_id = generate_unique_order_id(db)
-
-    # Step 3: Update order_id in db
     update_db(chat_id, {"order_id": new_order_id}, file_path=db_path)
 
-    # Step 4: Compose prompt
+    # Step 1: Detect language of last message
+    lang_prompt = (
+        f"What language is this message written in? Only return the language name.\n\n"
+        f"Message:\n{last_message}"
+    )
+    lang_response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": lang_prompt}]
+    )
+    customer_language = lang_response.choices[0].message.content.strip()
+
+    # Step 2: Generate the actual reply
     prompt = (
-        "You're an AI assistant for an online seller. "
-        "The user's intent has been identified as wanting to buy a product. "
-        f"The product is called '{product_name}' and it costs HK${price}. "
-        f"The FPS payment ID is {fps_id}.\n"
-        f"The latest generated order ID for this transaction is: {new_order_id}.\n\n"
-        f"Here is the recent chat for context:\n{recent_context}\n\n"
-        "Write a friendly, polite message confirming the item is available and providing the payment details. "
-        f"Kindly remind the customer to include the order ID: **{new_order_id}** (note the colon before the ID) in the remarks section when sending payment via FPS. "
-        "Also remind them to only use the most recent order ID we’ve generated for them — a new one is created each time they request to buy. "
-        "It’s important that they write the order ID correctly to avoid any delays or complications with verifying their payment. "
-        "Once they’ve sent the payment, ask them to let us know so we can proceed to the next step, which is to provide the product. "
-        "Strictly avoid discussing anything unrelated to the sale. "
-        "Reply in the language used by the customer. "
-        "Keep the tone casual, helpful, and natural. Return only the message to send to the customer."
+        "You're an AI assistant helping an online seller respond to a customer interested in buying a product.\n\n"
+        f"Product name: '{product_name}'\n"
+        f"Price: HK${price}\n"
+        f"FPS payment ID: {fps_id}\n"
+        f"Order ID: {new_order_id}\n\n"
+        f"Recent chat (messages unlabeled):\n{recent_context}\n\n"
+
+        "If the customer is asking about purchasing a different product, do not include any product details, payment information, or order ID. "
+        "Instead, kindly instruct them to open a new chat from the product page of the item they wish to purchase, and place their order there.\n\n"
+
+        "Otherwise, write a short, helpful, and polite response confirming the item is still available and providing FPS payment instructions. "
+        f"Clearly tell the customer to include only this exact order ID: {new_order_id} in the FPS payment remarks. Letters and numbers only."
+        "Warn them that including anything else (e.g., emojis, extra words, or the wrong ID) may delay or prevent payment verification. "
+        "Let them know that FPS is the only accepted payment method.\n\n"
+
+        "Remind them that a new order ID is generated each time they request to order, so they should always use the latest one. "
+        "Ask them to notify us once payment is complete so delivery can proceed.\n\n"
+
+        f"Respond in this language: {customer_language}.\n"
+        "If the customer is using Chinese, always use Traditional Chinese (繁體中文) — never Simplified.\n"
+        "- Keep the tone polite and natural.\n"
+        "- Do not repeat previous agent messages.\n"
+        "- Return only the message text."
     )
 
-    response = client.chat.completions.create(
+    completion = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]
     )
 
-    return response.choices[0].message.content.strip()
+    return completion.choices[0].message.content.strip()
 
 def generate_ask_response(chat_id, db_path="db.json"):
     """Generate a helpful response to a customer's question about the product."""
@@ -113,21 +151,46 @@ def generate_ask_response(chat_id, db_path="db.json"):
         raise ValueError(f"No messages found for chat ID '{chat_id}'.")
 
     recent_context = "\n".join(messages[-5:])
+    last_message = messages[-1]
 
+    # Step 1: Detect the language of the final message
+    lang_prompt = f"What language is this message written in?\n\n\"{last_message}\"\n\nReturn only the language name."
+    lang_response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": lang_prompt}]
+    )
+    customer_language = lang_response.choices[0].message.content.strip()
+
+    # Step 2: Main response generation
     prompt = (
-        "You're a friendly AI assistant for an online store. "
-        "The customer has sent a message that does not appear to be a direct question about a product or payment.\n\n"
-        f"Here is the recent chat:\n{recent_context}\n\n"
-        "Write a warm, polite, and concise response acknowledging their message. "
-        "Use a natural and friendly tone. Respond in the same language used by the customer.\n\n"
-        "If the message is a greeting, reply with a friendly greeting. "
-        "If it's a thank-you message, express appreciation in return. "
-        "If the customer sounds confused, asks when they'll get help from a human, or expresses frustration, politely offer to help and **reassure them that if there's anything the AI cannot assist with, a member of the customer support team will be with them shortly**.\n\n"
-        "If the message is unclear or off-topic, respond politely and let the customer know that you're here to assist with store-related questions (like products, orders, or payments). "
-        "Also let them know the customer support team will follow up if needed.\n\n"
-        "**Important:** Do not answer or engage with any topics outside the scope of this business. "
-        "Stay strictly focused on customer service for the store (e.g. product questions, payment, support).\n\n"
-        "Return only the message to send to the customer."
+        "You're a helpful and friendly AI assistant for an online store. "
+        "Your role is to answer customer questions about products and purchasing, and gently guide them toward placing an order if they're interested.\n\n"
+
+        f"Chat history:\n{recent_context}\n\n"
+
+        "Write a short, polite, and informative response based on the customer's **latest message**.\n\n"
+
+        f"Respond in this language: {customer_language}.\n"
+        "- If the language is Chinese, always use **Traditional Chinese (繁體中文)** — never Simplified.\n\n"
+
+        "Guidelines:\n"
+        "- Stay focused on store-related topics (products, orders, payments).\n"
+        "- If the customer asks how purchasing or payment works:\n"
+        "  → Explain that **FPS (Faster Payment System)** is the only accepted method.\n"
+        "  → Let them know that when they’re ready to order, a unique order ID will be generated.\n"
+        "  → They must include this exact order ID — and nothing else — in the **FPS payment remarks**.\n"
+        "  → Once payment is made, the system will:\n"
+        "     - Wait for the funds to arrive (this usually takes around 5 minutes)\n"
+        "  → After confirmation of payment, the customer should message us again to check the payment status.\n"
+        "  → If the customer's payment status is marked as 'paid' in the system, the product will be delivered through this chat immediately.\n"
+        "- Encourage the customer to let you know if they’d like to place an order.\n"
+        "- If the message is vague or off-topic, steer it toward product questions or order interest.\n"
+        "- Do not include an order ID unless they’ve clearly expressed intent to buy.\n\n"
+
+        "Important:\n"
+        "- Keep tone polite, natural, and friendly.\n"
+        "- Do not invent or assume product details not mentioned.\n"
+        "- Return only the message to send — no labels, formatting, or extra explanations."
     )
 
     response = client.chat.completions.create(
@@ -151,21 +214,42 @@ def generate_other_response(chat_id, db_path="db.json"):
         raise ValueError(f"No messages found for chat ID '{chat_id}'.")
 
     recent_context = "\n".join(messages[-5:])
+    last_message = messages[-1]
 
-    prompt = prompt = (
+    # Step 1: Detect the language of the final message
+    lang_prompt = f"What language is this message written in?\n\n\"{last_message}\"\n\nReturn only the language name."
+    lang_response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": lang_prompt}]
+    )
+    customer_language = lang_response.choices[0].message.content.strip()
+
+    # Step 2: Generate the response in that language
+    prompt = (
         "You're a friendly AI assistant for an online store. "
         "The customer has sent a message that does not appear to be a direct question about a product or payment.\n\n"
         f"Here is the recent chat:\n{recent_context}\n\n"
-        "Write a warm, polite, and concise response acknowledging their message. "
-        "Use a natural and friendly tone. Respond in the same language used by the customer.\n\n"
-        "If the message is a greeting, reply with a friendly greeting. "
-        "If it's a thank-you message, express appreciation in return. "
-        "If the customer sounds confused, asks when they'll get help from a human, or expresses frustration, politely offer to help and reassure them that if there's anything the AI cannot assist with, a member of the customer support team will be with them shortly.\n\n"
-        "If the message is unclear or off-topic, respond politely and let the customer know that you're here to assist with store-related questions (like products, orders, or payments). "
-        "Also let them know the customer support team will follow up if needed.\n\n"
-        "**Important:** Do not answer or engage with any topics outside the scope of this business. "
-        "Stay strictly focused on customer service for the store (e.g. product questions, payment, support).\n\n"
-        "Return only the message to send to the customer."
+
+        "Use earlier messages for context, but prioritize the customer’s most recent message when crafting your response.\n\n"
+
+        "Write a warm, polite, and concise reply acknowledging their latest message. "
+        "Use a natural, conversational tone.\n\n"
+
+        f"Respond in this language: {customer_language}.\n"
+        "- If the language is Chinese, always reply using Traditional Chinese (繁體中文) — never Simplified.\n\n"
+
+        "**If the message is:**\n"
+        "- A greeting → reply with a friendly greeting and mention that this is a fully automated service where purchases can be made 24/7 without hassle.\n"
+        "- A thank-you → express appreciation in return.\n"
+        "- Confused, frustrated, or asking about human help → offer to assist, and reassure them that if the AI can’t help, a human support team member will follow up shortly.\n"
+        "- Unclear or unrelated → politely let them know that you're here to assist with store-related topics like products, orders, or payments. Let them know support will follow up if needed.\n\n"
+
+        "**Important constraints:**\n"
+        "- Do not engage with or reply to any topics outside the store's services.\n"
+        "- Stay strictly focused on store-related customer service (e.g. product inquiries, payments, orders, support).\n"
+        "- Never generate, guess, or suggest information outside of the conversation.\n\n"
+
+        "Return only the message to send to the customer — do not include explanations or labels."
     )
 
     response = client.chat.completions.create(

@@ -1,18 +1,19 @@
-# 🛍️ Carousell AI
+# Carousell AI
 
-Carousell AI is an automated agent designed to interact with the Carousell platform using AI. It can help automate tasks like product listing, replying to messages, and managing customer interactions.
+Carousell AI is an automation agent built to interact with the Carousell platform. It uses AI and a real browser profile to automate responses and customer interactions.
 
-## 🚀 Features
+## Features
 
-- 🤖 AI-generated replies to customer inquiries  
-- 📦 Automated product listing and updates  
-- 🌐 Multi-language support with language detection  
-- 📊 Intent classification and smart message handling  
-- 🔒 Environment-configurable settings  
+- AI-generated responses using Groq and LangChain
+- Intent classification and validity checks
+- Multi-language support with detection
+- Handles response types: BUY, ASK, PAID, OTHER
+- Uses Patchright to load Edge browser with real user profile
+- Configurable via `.env`
 
-## ⚙️ Setup
+## Setup
 
-1. **Clone the repo**
+### 1. Clone the repo
 
 ```bash
 git clone https://github.com/your-username/carousell_ai.git
@@ -23,7 +24,9 @@ cd carousell_ai
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+source .venv/bin/activate        # macOS/Linux
+# OR
+.venv\Scripts\activate           # Windows
 ```
 
 3. **Install dependencies**
@@ -35,9 +38,9 @@ pip install -r requirements.txt
 4. **Create your `.env` file**
 
 ```env
-CAROUSELL_EMAIL=your_email
-CAROUSELL_PASSWORD=your_password
-OPENAI_API_KEY=your_key
+GROQ_API_KEY=your-groq-api-key
+WEBHOOK_USER=your-username
+WEBHOOK_PASS=your-password
 ```
 
 ## 🧪 Run the Bot
@@ -49,10 +52,12 @@ python main.py
 ## 🛠️ Tech Stack
 
 - Python 3.10+
+- Patchright
 - Playwright
-- OpenAI / Groq
-- dotenv
-- Langchain (optional)
+-	Groq
+-	FastAPI
+-	LangChain
+-	dotenv
 
 ## 📄 License
 

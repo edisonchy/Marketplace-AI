@@ -52,13 +52,9 @@ async def receive_email(request: Request):
             update_db(chat_id, {"status": "paid"})
             return {
                 "status": "success",
-                "chat_id": chat_id,
-                "order_id": order_id,
-                "amount": amount
             }
 
     return {
         "status": "error",
         "reason": "Order ID not found in any chat record",
-        "order_id": order_id
     }

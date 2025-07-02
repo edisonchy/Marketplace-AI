@@ -1,4 +1,4 @@
-from groq_utils import interpret_intent, generate_buy_response, generate_ask_response, generate_other_response
+from groq_utils import interpret_intent, generate_buy_response, generate_ask_response, generate_other_response, generate_paid_response
 
 def handle_chat(chat_id):
     intent = interpret_intent(chat_id)
@@ -9,14 +9,9 @@ def handle_chat(chat_id):
         # send_payment_instructions(chat_id)
         response = generate_buy_response(chat_id)
 
-    # elif intent == "paid":
-    #     print("Checking email for confirmation...")
-    #     if check_payment_received(email, chat_id):  # You’ll need to define this
-    #         print("Sending redeem code.")
-    #         # send_redeem_code(chat_id)
-    #     else:
-    #         print("Payment not found, asking user to try again.")
-    #         # notify_payment_issue(chat_id)
+    elif intent == "paid":
+        print("Checking email for confirmation...")
+        response = generate_paid_response(chat_id)
 
     elif intent == "ask":
         print("Answering question.")

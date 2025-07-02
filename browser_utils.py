@@ -11,7 +11,7 @@ def launch_edge_persistent_context(edge_path=None, user_data_dir=None):
     browser = playwright.chromium.launch_persistent_context(
         user_data_dir=user_data_dir,
         executable_path=edge_path,
-        headless=False,
+        headless=True,
         no_viewport=True,
         args=[
             "--disable-blink-features=AutomationControlled",

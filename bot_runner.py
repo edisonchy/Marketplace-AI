@@ -22,6 +22,8 @@ def run():
             page.goto("https://www.carousell.com.hk/inbox", wait_until="domcontentloaded")
             if "inbox" not in page.url:
                 print("Warning: Inbox page may not have loaded correctly.")
+            
+            page.screenshot(path="browser_check.png")
 
             unread_badge_selector = unread_badge_xpath()
 

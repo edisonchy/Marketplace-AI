@@ -4,7 +4,7 @@ import string
 from groq import Groq
 from dotenv import load_dotenv
 
-from db_utils import load_db, update_db
+from db_utils import load_db, update_db, get_next_redeem_code
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -20,7 +20,7 @@ def interpret_intent(chat_id, db_path="db.json"):
 
     recent = messages[-5:]
     full_chat = "\n".join(recent)
-    parcial_chat = "\n".join(recent[:-2])
+    parcial_chat = "\n".join(recent[-2:])
     last_message = recent[-1]
 
     # Step 1: First Intent Classification
@@ -126,9 +126,8 @@ def generate_buy_response(chat_id, db_path="db.json"):
         "Otherwise, write a short, helpful, and polite response confirming the item is still available and providing FPS payment instructions. "
         f"Clearly tell the customer to include only this exact order ID: {current_order_id} in the FPS payment remarks. Letters and numbers only."
         "Warn them that including anything else (e.g., emojis, extra words, or the wrong ID) may delay or prevent payment verification. "
-        "Let them know that FPS is the only accepted payment method.\n\n"
-
-        "Ask them to notify us once payment is complete so delivery can proceed.\n\n"
+        "Let them know that FPS is the only accepted payment method."
+        "Once they've completed the payment, ask them to kindly notify us so we can confirm it and proceed with delivering the product.\n\n"
 
         f"Respond in this language: {customer_language}.\n"
         "If the customer is using Chinese, always use Traditional Chinese (繁體中文) — never Simplified.\n"
@@ -173,7 +172,7 @@ def generate_ask_response(chat_id, db_path="db.json"):
     prompt = (
         "You're a helpful and friendly AI assistant for an online store. "
         "Your role is to answer customer questions about products and purchasing, and gently guide them toward placing an order if they're interested.\n\n"
-
+        f"Product name: '{product_name}'\n"
         f"Chat history:\n{recent_context}\n\n"
 
         "Write a short, polite, and informative response based on the customer's **latest message**.\n\n"
@@ -184,7 +183,7 @@ def generate_ask_response(chat_id, db_path="db.json"):
         "Guidelines:\n"
         "- Stay focused on store-related topics (products, orders, payments).\n"
         "- If the customer asks how purchasing or payment works:\n"
-        "  → Explain that **FPS (Faster Payment System)** is the only accepted method.\n"
+        "  → Explain that FPS (Faster Payment System) is the only accepted method.\n"
         "  → Let them know that when they’re ready to order, a unique order ID will be generated.\n"
         "  → They must include this exact order ID — and nothing else — in the FPS payment remarks.\n"
         "  → Once payment is made, the system will:\n"
@@ -263,6 +262,85 @@ def generate_other_response(chat_id, db_path="db.json"):
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]
+    )
+
+    return response.choices[0].message.content.strip()
+
+def generate_paid_response(chat_id, db_path="db.json"):
+    db = load_db(db_path)
+
+    if chat_id not in db:
+        raise ValueError(f"Chat ID '{chat_id}' not found.")
+
+    entry = db[chat_id]
+    status = entry.get("status", "").lower()
+    messages = entry.get("messages", [])
+    product_name = entry.get("product", "your item")
+
+    if not messages:
+        raise ValueError(f"No messages found for chat ID '{chat_id}'.")
+
+    last_message = messages[-1]
+    recent_context = "\n".join(messages[-5:])
+
+    # Detect customer language
+    lang_prompt = (
+        f"What language is this message written in? Only return the language name.\n\n"
+        f"Message:\n{last_message}"
+    )
+    lang_response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": lang_prompt}]
+    )
+    customer_language = lang_response.choices[0].message.content.strip()
+
+    # Compose reply
+    if status == "paid":
+        redeem_code = get_next_redeem_code()
+        if redeem_code:
+            reply_prompt = (
+                "You're an AI assistant for an online store. The customer has completed payment.\n\n"
+                f"Product: {product_name}\n"
+                f"Order ID: {entry.get('order_id')}\n"
+                f"Status: {status}\n"
+                f"Redeem code: {redeem_code}\n"
+                f"Recent chat:\n{recent_context}\n\n"
+                "Write a short, polite message confirming that payment has been received. "
+                f"Let the customer know their redeem code is: {redeem_code}\n\n"
+                "Thank them for their purchase and politely encourage them to leave a positive comment if they're satisfied. "
+                "Let the customer know that if they would like to make another purchase, they can let us know and a new order ID will be provided for the new purchase.\n\n"
+                f"Respond in this language: {customer_language}.\n"
+                "If the language is Chinese, always use Traditional Chinese (繁體中文)."
+            )
+            update_db(chat_id, {"status": "", "order_id": ""}, file_path=db_path)
+        else:
+            reply_prompt = (
+                "You're an AI assistant for an online store. The cwwustomer has completed payment.\n\n"
+                f"Product: {product_name}\n"
+                f"Order ID: {entry.get('order_id')}\n"
+                f"Status: {status}\n"
+                f"Recent chat:\n{recent_context}\n\n"
+                "Write a short, polite message confirming that payment was received. "
+                "However, inform the customer that we are currently out of redeem codes. "
+                "Let them know that customer support has been notified and will follow up to resolve the issue promptly. "
+                "Reassure the customer that everything will be taken care of and thank them for their patience.\n\n"
+                f"Respond in this language: {customer_language}.\n"
+                "If the language is Chinese, always use Traditional Chinese (繁體中文)."
+            )
+    else:
+        reply_prompt = (
+            f"You're an AI assistant for an online store. The customer is checking if their payment has been received.\n\n"
+            f"Product: {product_name}\n"
+            f"Recent chat:\n{recent_context}\n\n"
+            f"Write a polite response letting them know that payment has not yet been confirmed, and they should ensure they used the correct order ID in FPS remarks.\n"
+            "Let them know verification can take a few minutes, and they may check back shortly.\n\n"
+            f"Respond in this language: {customer_language}.\n"
+            "If Chinese, always use Traditional Chinese (繁體中文)."
+        )
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": reply_prompt}]
     )
 
     return response.choices[0].message.content.strip()

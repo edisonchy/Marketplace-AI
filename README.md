@@ -10,19 +10,6 @@ Carousell AI is an automated agent designed to interact with the Carousell platf
 - 📊 Intent classification and smart message handling  
 - 🔒 Environment-configurable settings  
 
-## 📁 Project Structure
-
-```
-carousell_ai/
-├── main.py              # Entry point of the bot
-├── agent/               # Core logic for Carousell interactions
-├── models/              # LLM and intent classification logic
-├── utils/               # Helper functions
-├── .env                 # Environment variables
-├── .gitignore
-└── README.md
-```
-
 ## ⚙️ Setup
 
 1. **Clone the repo**

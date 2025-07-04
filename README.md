@@ -61,4 +61,4 @@ python main.py
 
 ---
 
-*This project was developed solely for educational purposes. It is intended to demonstrate concepts in AI, automation, and web automation, and is not designed for production or commercial use.
+*This project was developed solely for educational purposes. It is intended to demonstrate concepts in AI, automation, and web automation, and is not designed for production or commercial use.*

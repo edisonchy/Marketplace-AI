@@ -1,19 +1,18 @@
 # Carousell AI
 
-Carousell AI is an automation agent built to interact with the Carousell platform. It uses AI and a real browser profile to automate responses and customer interactions. It tracks user payments through email forwarding and a webhook via FastAPI. The purpose is to automate the entire checkout process for a product using AI.
+Marketplace AI is an automation agent designed to interact with customers on an online marketplace. The goal of this project is to fully automate the sales process on the platform. The agent uses AI to identify customer intent and generate appropriate responses to meet their needs. It tracks payments through email forwarding and webhooks (via FastAPI), and once payment is confirmed, it automatically handles the delivery of the purchased product.
 
 ## Features
 
-- AI-generated responses using Groq
-- Intent classification and validity checks
-- Multi-language support with detection
+- Automates navigation and interaction within the online marketplace
+- Performs intent classification and self-validity checks
 - Handles response types: BUY, ASK, PAID, OTHER
-- Uses Patchright to load Edge browser with real user profile
-- Tracks payment via webhook and email parsing
-- Configurable via .env
+- Implements safeguards to reduce AI hallucinations
+- Generates tailored, AI-driven responses to customer inquiries
+- Supports multiple languages with automatic language detection
+- Monitors payments via webhook integration and email parsing
 
-
-## Setup
+## Get Up and Running
 
 ### 1. Clone the repo
 
@@ -37,6 +36,7 @@ source .venv/bin/activate        # macOS/Linux
 pip install -r requirements.txt
 ```
 
+## Configeration
 4. **Create your `.env` file**
 
 ```env
@@ -68,4 +68,4 @@ MIT License
 
 ---
 
-*Made with ❤️ for automation enthusiasts.*
+*Made with ❤️ and for educational purposes only

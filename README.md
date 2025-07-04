@@ -47,6 +47,7 @@ WEBSITE=your-website-url
 ```
 
 **Import your cookies**
+
 Import your cookies in cookies.json:
 
 ```cookies.json

@@ -53,7 +53,7 @@ Import your cookies in cookies.json:
 {
   "cookies": "your_cookie_string_here"
 }
-}
+```
 
 ## Run the Bot
 

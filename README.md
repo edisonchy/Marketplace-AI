@@ -14,7 +14,7 @@ Marketplace AI is an automation agent designed to interact with customers on an 
 
 ## Get Up and Running
 
-### 1. Clone the repo
+1. **Clone the repo**
 
 ```bash
 git clone https://github.com/your-username/carousell_ai.git
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 ```
 
 ## Configeration
-4. **Create your `.env` file**
+**Make your `.env` file**
 
 ```env
 GROQ_API_KEY=your-groq-api-key
@@ -56,16 +56,9 @@ python main.py
 
 - Python 3.10+
 - Patchright
-- Playwright
 -	Groq
 -	FastAPI
--	LangChain
--	dotenv
-
-## 📄 License
-
-MIT License
 
 ---
 
-*Made with ❤️ and for educational purposes only
+*This project was developed solely for educational purposes. It is intended to demonstrate concepts in AI, automation, and web automation, and is not designed for production or commercial use.

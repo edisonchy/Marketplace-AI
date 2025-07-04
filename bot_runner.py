@@ -2,6 +2,7 @@ from patchright._impl._errors import TimeoutError
 import re
 from dotenv import load_dotenv
 import time
+import os
 
 from browser_utils import launch_edge_persistent_context
 from cookie_utils import sanitize_cookies, load_cookies
@@ -11,6 +12,8 @@ from chat_handler import handle_chat
 
 load_dotenv()
 
+website = os.getenv("WEBSITE")
+
 def run():
     browser, playwright = launch_edge_persistent_context()
     page = browser.pages[0]
@@ -19,7 +22,7 @@ def run():
 
     try:
         while True:
-            page.goto("https://www.carousell.com.hk/inbox", wait_until="domcontentloaded")
+            page.goto(website, wait_until="domcontentloaded")
             if "inbox" not in page.url:
                 print("Warning: Inbox page may not have loaded correctly.")
             

@@ -46,9 +46,7 @@ WEBHOOK_PASS=your-password
 WEBSITE=your-website-url
 ```
 
-**Import your cookies**
-
-Import your cookies in cookies.json:
+**Import your cookies in cookies.json**
 
 ```cookies.json
 {

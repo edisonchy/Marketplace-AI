@@ -43,6 +43,7 @@ pip install -r requirements.txt
 GROQ_API_KEY=your-groq-api-key
 WEBHOOK_USER=your-username
 WEBHOOK_PASS=your-password
+WEBSITE=your-website-url
 ```
 
 ## 🧪 Run the Bot

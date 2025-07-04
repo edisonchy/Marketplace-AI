@@ -1,15 +1,17 @@
 # Carousell AI
 
-Carousell AI is an automation agent built to interact with the Carousell platform. It uses AI and a real browser profile to automate responses and customer interactions.
+Carousell AI is an automation agent built to interact with the Carousell platform. It uses AI and a real browser profile to automate responses and customer interactions. It tracks user payments through email forwarding and a webhook via FastAPI. The purpose is to automate the entire checkout process for a product using AI.
 
 ## Features
 
-- AI-generated responses using Groq and LangChain
+- AI-generated responses using Groq
 - Intent classification and validity checks
 - Multi-language support with detection
 - Handles response types: BUY, ASK, PAID, OTHER
 - Uses Patchright to load Edge browser with real user profile
-- Configurable via `.env`
+- Tracks payment via webhook and email parsing
+- Configurable via .env
+
 
 ## Setup
 

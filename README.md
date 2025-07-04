@@ -46,7 +46,7 @@ WEBHOOK_PASS=your-password
 WEBSITE=your-website-url
 ```
 
-## 🧪 Run the Bot
+## Run the Bot
 
 ```bash
 python main.py

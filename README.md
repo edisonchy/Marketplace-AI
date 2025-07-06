@@ -60,7 +60,7 @@ WEBSITE=your-website-url
 python main.py
 ```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - Python 3.10+
 - Patchright

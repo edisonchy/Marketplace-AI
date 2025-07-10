@@ -60,13 +60,6 @@ WEBSITE=your-website-url
 python main.py
 ```
 
-## Tech Stack
-
-- Python 3.10+
-- Patchright
--	Groq
--	FastAPI
-
 ---
 
 *This project was developed solely for educational purposes. It is intended to demonstrate concepts in AI, automation, and web automation, and is not designed for production or commercial use.*

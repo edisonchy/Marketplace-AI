@@ -12,7 +12,7 @@ Marketplace AI is an automation agent designed to interact with customers on an 
 - Supports multiple languages with automatic language detection
 - Monitors payments via webhook integration and email parsing
 
-## Get Up and Running
+## Setup
 
 1. **Clone the repo**
 

@@ -4,21 +4,20 @@ Marketplace AI is an automation agent designed to interact with customers on an 
 
 ## Features
 
-- Automates navigation and interaction within the online marketplace
-- Performs intent classification and self-validity checks
-- Handles response types: BUY, ASK, PAID, OTHER
-- Implements safeguards to reduce AI hallucinations
+- Automates navigation and interaction within the online marketplace using pupeeter.
+- Performs intent classification of response type using open source LLM via groq. The response type includes: BUY, ASK, PAID, OTHER
+- Monitors payments via webhook integration and email parsing
+- Implements self-validity checks and safeguards to reduce AI hallucinations
 - Generates tailored, AI-driven responses to customer inquiries
 - Supports multiple languages with automatic language detection
-- Monitors payments via webhook integration and email parsing
 
 ## Setup
 
 1. **Clone the repo**
 
 ```bash
-git clone https://github.com/your-username/carousell_ai.git
-cd carousell_ai
+git clone https://github.com/edisonchy/Marketplace-AI
+cd Marketplace-AI
 ```
 
 2. **Create and activate a virtual environment**

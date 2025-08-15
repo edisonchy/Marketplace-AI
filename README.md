@@ -5,6 +5,7 @@ Marketplace AI is an automation agent designed to interact with customers on an 
 <a href="https://youtu.be/ATgwAl5gphQ">
   <img src="https://github.com/user-attachments/assets/f0c6789a-83ea-4525-b9b2-bfd7ba27a931" alt="Video thumbnail" width="400">
 </a>
+<br>
 (Click on image to watch demo video)
 
 ## Features

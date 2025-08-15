@@ -4,6 +4,9 @@ Marketplace AI is an automation agent designed to interact with customers on an 
 
 [![Video thumbnail](https://img.youtube.com/vi/ATgwAl5gphQ/default.jpg)](https://youtu.be/ATgwAl5gphQ)
 
+[![Video thumbnail] (<img width="1294" height="807" alt="image" src="https://github.com/user-attachments/assets/f0c6789a-83ea-4525-b9b2-bfd7ba27a931" />])(https://youtu.be/ATgwAl5gphQ)
+
+
 ## Features
 
 - Automates navigation and interaction within the online marketplace using pupeeter.

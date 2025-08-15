@@ -2,7 +2,7 @@
 
 Marketplace AI is an automation agent designed to interact with customers on an online marketplace. The goal of this project is to fully automate the sales process on the platform. The agent uses AI to identify customer intent and generate appropriate responses to meet their needs. It tracks payments through email forwarding and webhooks (via FastAPI), and once payment is confirmed, it automatically handles the delivery of the purchased product.
 
-[![Video thumbnail](https://i.ytimg.com/vi/ATgwAl5gphQ/maxresdefault.jpg)](https://youtu.be/ATgwAl5gphQ)
+[![Video thumbnail](https://img.youtube.com/vi/ATgwAl5gphQ/default.jpg)](https://youtu.be/ATgwAl5gphQ)
 
 ## Features
 

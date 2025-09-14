@@ -4,16 +4,12 @@
 Marketplace AI is an automation agent designed to **streamline the entire sales process** on online marketplaces.  
 It interacts directly with customers, classifies their intent, verifies payments, and handles delivery — all without human intervention.  
 
----
-
 ## Demo  
 
 <a href="https://youtu.be/ATgwAl5gphQ">
   <img src="https://github.com/user-attachments/assets/f0c6789a-83ea-4525-b9b2-bfd7ba27a931" alt="Video thumbnail" width="400">
 </a>  
 *(Click the image to watch the demo video)*  
-
----
 
 ## Target Problems  
 
@@ -22,8 +18,6 @@ It interacts directly with customers, classifies their intent, verifies payments
 - **Manual payment verification** → Checking emails and webhooks manually causes errors and delays.  
 - **Slow order fulfillment** → Manual delivery steps prevent instant product access or fast shipping.  
 - **Scalability issues** → Growing sales require more staff, driving up costs and limiting growth.  
-
----
 
 ## Features  
 
@@ -34,16 +28,12 @@ It interacts directly with customers, classifies their intent, verifies payments
 - Generates tailored, AI-driven responses to customer inquiries.  
 - Supports **multiple languages** with automatic detection.  
 
----
-
 ## Requirements  
 
 - Python 3.9+  
 - Puppeteer (installed automatically via dependencies)  
 - A valid **Groq API key**  
 - Marketplace account cookies (`cookies.json`)  
-
----
 
 ## Quick Start  
 
@@ -86,8 +76,6 @@ It interacts directly with customers, classifies their intent, verifies payments
    ```bash
    python main.py
    ```
-
----
 
 ## Disclaimer  
 

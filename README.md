@@ -10,7 +10,7 @@ It interacts directly with customers, classifies their intent, verifies payments
   <img src="https://github.com/user-attachments/assets/f0c6789a-83ea-4525-b9b2-bfd7ba27a931" alt="Video thumbnail" width="400">
 </a>  
 <br>  
-*(Click the image to watch the demo video)* 
+<em>(Click the image to watch the demo video)</em>
 
 ## Target Problems  
 
